@@ -26,17 +26,7 @@ class DefaultLayout extends Component {
   render() {
     return (
       <div className="app">
-        <AppHeader fixed>
-          <DefaultHeader />
-        </AppHeader>
         <div className="app-body">
-          <AppSidebar fixed display="lg">
-            <AppSidebarHeader />
-            <AppSidebarForm />
-            <AppSidebarNav navConfig={navigation} {...this.props} />
-            <AppSidebarFooter />
-            <AppSidebarMinimizer />
-          </AppSidebar>
           <main className="main">
             <AppBreadcrumb appRoutes={routes}/>
             <Container fluid>
@@ -56,9 +46,7 @@ class DefaultLayout extends Component {
             <DefaultAside />
           </AppAside>
         </div>
-        <AppFooter>
-          <DefaultFooter />
-        </AppFooter>
+        
       </div>
     );
   }
