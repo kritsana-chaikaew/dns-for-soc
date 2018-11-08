@@ -94,13 +94,18 @@ class Dashboard extends Component {
       dropdownOpen: false,
       radioSelected: 2,
       mainChart: null,
+      nxInterval: '1h',
       normal: null,
       error: null,
+      radioSelected: 2,
+      healthInterval: '2h',
+      radioHealth: 2,
     };
   }
 
-  componentDidMount() {
-    fetch('http://10.3.132.180:3000/nx?interval=1')
+  fetchData () {
+    
+    fetch('http://10.3.132.180:3000/nx?interval=' + this.state.nxInterval.toString())
     .then(function(response) {
         if (response.status >= 400) {
             throw new Error("Bad response from server");
@@ -140,7 +145,7 @@ class Dashboard extends Component {
       })
     })
     .then(() => {
-      fetch('http://10.3.132.180:3000/normal?interval=2')
+      fetch('http://10.3.132.180:3000/normal?interval='+this.state.healthInterval)
       .then(function(response) {
           if (response.status >= 400) {
               throw new Error("Bad response from server");
@@ -152,7 +157,7 @@ class Dashboard extends Component {
       });
     })
     .then(() => {
-      fetch('http://10.3.132.180:3000/error?interval=2')
+      fetch('http://10.3.132.180:3000/error?interval='+this.state.healthInterval)
       .then(function(response) {
           if (response.status >= 400) {
               throw new Error("Bad response from server");
@@ -165,6 +170,10 @@ class Dashboard extends Component {
     });
   }
 
+  componentDidMount() {
+    this.fetchData();
+  }
+
   toggle() {
     this.setState({
       dropdownOpen: !this.state.dropdownOpen,
@@ -172,9 +181,31 @@ class Dashboard extends Component {
   }
 
   onRadioBtnClick(radioSelected) {
+    var interval = '1h';
+    if (radioSelected == 1) {
+      interval = '5m';
+    } else if (radioSelected == 2) {
+      interval = '1h'
+    }
     this.setState({
+      nxInterval: interval,
       radioSelected: radioSelected,
     });
+    this.fetchData();
+  }
+
+  onHealthBtnClick(radioHealth) {
+    var interval = '2h';
+    if (radioHealth == 1) {
+      interval = '1h';
+    } else if (radioHealth == 2) {
+      interval = '2h'
+    }
+    this.setState({
+      healthInterval: interval,
+      radioHealth: radioHealth,
+    });
+    this.fetchData();
   }
 
   getOption() {
@@ -199,7 +230,7 @@ class Dashboard extends Component {
       const table = new Array(7);
       for (var i=0; i<table.length; i++) {
         table[i] = new Array(24);
-        table[i] = table[i].fill(0.1);
+        table[i] = table[i].fill(0);
       }
 
       for (var i=0; i<health.length; i++) {
@@ -261,7 +292,7 @@ class Dashboard extends Component {
           name: 'Health',
           type: 'effectScatter',
           symbolSize: function (val) {
-              return val[2] * 50;
+              return val[2] * 70;
           },
           data: data,
           animationDelay: function (idx) {
@@ -296,8 +327,16 @@ class Dashboard extends Component {
               <CardBody>
                 <Row>
                   <Col sm="5">
-                    <CardTitle className="mb-0">Nxdomain</CardTitle>
+                    <CardTitle className="mb-0">Normal and Nxdomain</CardTitle>
                     <div className="text-muted">3-7 November 2017</div>
+                  </Col>
+                  <Col sm="7" className="d-none d-sm-inline-block">
+                    <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
+                      <ButtonGroup className="mr-3" aria-label="First group">
+                        <Button color="outline-secondary" onClick={() => this.onRadioBtnClick(1)} active={this.state.radioSelected === 1}>Minute</Button>
+                        <Button color="outline-secondary" onClick={() => this.onRadioBtnClick(2)} active={this.state.radioSelected === 2}>Hour</Button>
+                      </ButtonGroup>
+                    </ButtonToolbar>
                   </Col>
                 </Row>
                 <div className="chart-wrapper" style={{ height: 300 + 'px', marginTop: 40 + 'px' }}>
@@ -325,6 +364,14 @@ class Dashboard extends Component {
                   <Col sm="5">
                     <CardTitle className="mb-0">Traffic Health</CardTitle>
                     <div className="text-muted">3-7 November 2017</div>
+                  </Col>
+                  <Col sm="7" className="d-none d-sm-inline-block">
+                    <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
+                      <ButtonGroup className="mr-3" aria-label="First group">
+                        <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(1)} active={this.state.radioHealth === 1}>1 Hour</Button>
+                        <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(2)} active={this.state.radioHealth === 2}>2 Hours</Button>
+                      </ButtonGroup>
+                    </ButtonToolbar>
                   </Col>
                 </Row>
                 <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 40 + 'px' }}>
