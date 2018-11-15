@@ -97,7 +97,6 @@ class Dashboard extends Component {
       nxInterval: '1h',
       normal: null,
       error: null,
-      radioSelected: 2,
       healthInterval: '2h',
       radioHealth: 2,
     };
