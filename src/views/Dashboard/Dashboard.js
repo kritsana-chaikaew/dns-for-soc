@@ -365,17 +365,20 @@ class Dashboard extends Component {
   getTop() {
     var txtKey = [];
     var txtValue = [];
+    var logScale = false;
     try {
       txtKey = this.state.topType.map((x) => x.key);
       var tmp = this.state.topType.map((x) => x.doc_count);
 
       var minValue = Math.min(...tmp);
       var maxValue = Math.max(...tmp);
-      
+
       if (maxValue > 1000*minValue) {
-        txtValue = tmp.map((x) => Math.log(x))
+        txtValue = tmp.map((x) => Math.log(x));
+        logScale = true;
       } else {
         txtValue = tmp;
+        logScale = false;
       }
     }
      catch (err) {
@@ -383,14 +386,14 @@ class Dashboard extends Component {
     }
 
     var option = {
+      title: {
+        text: logScale?'Log Scale':''
+      },
       tooltip: {
           trigger: 'axis',
           axisPointer: {
               type: 'shadow'
           }
-      },
-      legend: {
-          data: ['TXT']
       },
       grid: {
           left: '3%',
@@ -408,7 +411,7 @@ class Dashboard extends Component {
       },
       series: [
           {
-              name: 'TXT',
+              name: 'Data',
               type: 'bar',
               data: txtValue
           }
@@ -492,8 +495,16 @@ class Dashboard extends Component {
                   <Col sm="7" className="d-none d-sm-inline-block">
                     <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
                       <ButtonGroup className="mr-3" aria-label="First group">
+                      <Button color="outline-secondary" onClick={() => this.onTypeClick('A')} active={this.state.typeSelected === 'A'}>A</Button>
+                        <Button color="outline-secondary" onClick={() => this.onTypeClick('AAAA')} active={this.state.typeSelected === 'AAAA'}>AAAA</Button>
                         <Button color="outline-secondary" onClick={() => this.onTypeClick('TXT')} active={this.state.typeSelected === 'TXT'}>TXT</Button>
                         <Button color="outline-secondary" onClick={() => this.onTypeClick('NS')} active={this.state.typeSelected === 'NS'}>NS</Button>
+                        <Button color="outline-secondary" onClick={() => this.onTypeClick('CNAME')} active={this.state.typeSelected === 'CNAME'}>CNAME</Button>
+                        <Button color="outline-secondary" onClick={() => this.onTypeClick('PTR')} active={this.state.typeSelected === 'PTR'}>PTR</Button>
+                        <Button color="outline-secondary" onClick={() => this.onTypeClick('MX')} active={this.state.typeSelected === 'MX'}>MX</Button>
+                        <Button color="outline-secondary" onClick={() => this.onTypeClick('RRSIG')} active={this.state.typeSelected === 'RRSIG'}>RRSIG</Button>
+                        <Button color="outline-secondary" onClick={() => this.onTypeClick('DNSKEY')} active={this.state.typeSelected === 'DNSKEY'}>DNSKEY</Button>
+                        <Button color="outline-secondary" onClick={() => this.onTypeClick('DS')} active={this.state.typeSelected === 'DS'}>DS</Button>
                       </ButtonGroup>
                     </ButtonToolbar>
                   </Col>
