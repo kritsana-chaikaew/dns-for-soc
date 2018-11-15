@@ -99,6 +99,7 @@ class Dashboard extends Component {
       error: null,
       healthInterval: '2h',
       radioHealth: 2,
+      topType: null,
     };
   }
 
@@ -165,6 +166,18 @@ class Dashboard extends Component {
       })
       .then(error => {
         this.setState({error: error});
+      });
+    })
+    .then(() => {
+      fetch('http://10.3.132.180:3000/type?type=TXT')
+      .then((response) => {
+        if (response.status >= 400) {
+          throw new Error("Bad response from server");
+        }
+        return response.json();
+      })
+      .then((type) => {
+        this.setState({topType: type});
       });
     });
   }
@@ -241,8 +254,6 @@ class Dashboard extends Component {
           data.push([j, i, table[i][j]]);
         }
       }
-
-      console.log(data)
 
     } catch (err) {
       console.log(err.message);
@@ -345,6 +356,57 @@ class Dashboard extends Component {
     return option;
   }
 
+  getTop() {
+    var txtKey = [];
+    var txtValue = [];
+    try {
+      // for (var i=0; i<this.state.topType.length; i++) {
+      //   console.log(this.state.topType[i].key);
+      // for (var i=0; i<this.state.topType.length; i++) {
+
+      // }
+      txtKey = this.state.topType.map((x) => x.key);
+      txtValue = this.state.topType.map((x) => x.doc_count);
+    }
+     catch (err) {
+      console.log(err.message);
+    }
+
+    var option = {
+      tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+              type: 'shadow'
+          }
+      },
+      legend: {
+          data: ['TXT']
+      },
+      grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+      },
+      xAxis: {
+          type: 'value',
+          boundaryGap: [0, 0.01]
+      },
+      yAxis: {
+          type: 'category',
+          data: txtKey
+      },
+      series: [
+          {
+              name: 'TXT',
+              type: 'bar',
+              data: txtValue
+          }
+      ]
+    };
+    return option;
+  }
+
   render() {
     return (
       <div className="animated fadeIn">
@@ -414,20 +476,20 @@ class Dashboard extends Component {
             <CardBody>
               <Row>
                 <Col sm="5">
-                  <CardTitle className="mb-0">Network Activity</CardTitle>
-                  <div className="text-muted">3 November 2017</div>
+                  <CardTitle className="mb-0">Top Query By Type</CardTitle>
+                  <div className="text-muted">3-7 November 2017</div>
                 </Col>
                 <Col sm="7" className="d-none d-sm-inline-block">
                   <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
                     <ButtonGroup className="mr-3" aria-label="First group">
-                      <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(1)} active={this.state.radioHealth === 1}>1 Hour</Button>
-                      <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(2)} active={this.state.radioHealth === 2}>2 Hours</Button>
+                      <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(1)} active={this.state.radioHealth === 1}>TXT</Button>
+                      <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(2)} active={this.state.radioHealth === 2}>NS</Button>
                     </ButtonGroup>
                   </ButtonToolbar>
                 </Col>
               </Row>
               <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 40 + 'px' }}>
-                <ReactEcharts option={this.getParallel()} />
+                <ReactEcharts option={this.getTop()} />
               </div>
             </CardBody>
           </Card>
