@@ -100,6 +100,7 @@ class Dashboard extends Component {
       healthInterval: '2h',
       radioHealth: 2,
       topType: null,
+      typeSelected: 'TXT',
     };
   }
 
@@ -169,7 +170,7 @@ class Dashboard extends Component {
       });
     })
     .then(() => {
-      fetch('http://10.3.132.180:3000/type?type=TXT')
+      fetch('http://10.3.132.180:3000/type?type='+this.state.typeSelected)
       .then((response) => {
         if (response.status >= 400) {
           throw new Error("Bad response from server");
@@ -217,6 +218,11 @@ class Dashboard extends Component {
       healthInterval: interval,
       radioHealth: radioHealth,
     });
+    this.fetchData();
+  }
+
+  onTypeClick(type) {
+    this.setState({typeSelected: type});
     this.fetchData();
   }
 
@@ -360,13 +366,17 @@ class Dashboard extends Component {
     var txtKey = [];
     var txtValue = [];
     try {
-      // for (var i=0; i<this.state.topType.length; i++) {
-      //   console.log(this.state.topType[i].key);
-      // for (var i=0; i<this.state.topType.length; i++) {
-
-      // }
       txtKey = this.state.topType.map((x) => x.key);
-      txtValue = this.state.topType.map((x) => x.doc_count);
+      var tmp = this.state.topType.map((x) => x.doc_count);
+
+      var minValue = Math.min(...tmp);
+      var maxValue = Math.max(...tmp);
+      
+      if (maxValue > 1000*minValue) {
+        txtValue = tmp.map((x) => Math.log(x))
+      } else {
+        txtValue = tmp;
+      }
     }
      catch (err) {
       console.log(err.message);
@@ -471,30 +481,30 @@ class Dashboard extends Component {
           </Col>
         </Row>
         <Row>
-        <Col>
-          <Card>
-            <CardBody>
-              <Row>
-                <Col sm="5">
-                  <CardTitle className="mb-0">Top Query By Type</CardTitle>
-                  <div className="text-muted">3-7 November 2017</div>
-                </Col>
-                <Col sm="7" className="d-none d-sm-inline-block">
-                  <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
-                    <ButtonGroup className="mr-3" aria-label="First group">
-                      <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(1)} active={this.state.radioHealth === 1}>TXT</Button>
-                      <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(2)} active={this.state.radioHealth === 2}>NS</Button>
-                    </ButtonGroup>
-                  </ButtonToolbar>
-                </Col>
-              </Row>
-              <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 40 + 'px' }}>
-                <ReactEcharts option={this.getTop()} />
-              </div>
-            </CardBody>
-          </Card>
-        </Col>
-      </Row>
+          <Col>
+            <Card>
+              <CardBody>
+                <Row>
+                  <Col sm="5">
+                    <CardTitle className="mb-0">Top Query By Type</CardTitle>
+                    <div className="text-muted">3-7 November 2017</div>
+                  </Col>
+                  <Col sm="7" className="d-none d-sm-inline-block">
+                    <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
+                      <ButtonGroup className="mr-3" aria-label="First group">
+                        <Button color="outline-secondary" onClick={() => this.onTypeClick('TXT')} active={this.state.typeSelected === 'TXT'}>TXT</Button>
+                        <Button color="outline-secondary" onClick={() => this.onTypeClick('NS')} active={this.state.typeSelected === 'NS'}>NS</Button>
+                      </ButtonGroup>
+                    </ButtonToolbar>
+                  </Col>
+                </Row>
+                <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 40 + 'px' }}>
+                  <ReactEcharts option={this.getTop()} />
+                </div>
+              </CardBody>
+            </Card>
+          </Col>
+        </Row>
       </div>
       
     );
