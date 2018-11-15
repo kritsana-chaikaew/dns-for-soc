@@ -317,6 +317,34 @@ class Dashboard extends Component {
     return option;
   }
 
+  getParallel(){
+    var option = {
+      parallelAxis: [
+          {dim: 0, name: 'Client IP'},
+          {dim: 1, name: 'DNS Server IP'},
+          {dim: 2, name: 'Type'},
+          {
+              dim: 3,
+              name: 'Answer',
+              type: 'category',
+              data: ['Excellent', 'Good', 'OK', 'Bad']
+          }
+      ],
+      series: {
+          type: 'parallel',
+          lineStyle: {
+              width: 4
+          },
+          data: [
+              [129, 100, 82, 'Good'],
+              [9.99, 80, 77, 'OK'],
+              [20, 120, 60, 'Excellent']
+            ]
+          }
+        };
+    return option;
+  }
+
   render() {
     return (
       <div className="animated fadeIn">
@@ -380,6 +408,31 @@ class Dashboard extends Component {
             </Card>
           </Col>
         </Row>
+        <Row>
+        <Col>
+          <Card>
+            <CardBody>
+              <Row>
+                <Col sm="5">
+                  <CardTitle className="mb-0">Network Activity</CardTitle>
+                  <div className="text-muted">3 November 2017</div>
+                </Col>
+                <Col sm="7" className="d-none d-sm-inline-block">
+                  <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
+                    <ButtonGroup className="mr-3" aria-label="First group">
+                      <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(1)} active={this.state.radioHealth === 1}>1 Hour</Button>
+                      <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(2)} active={this.state.radioHealth === 2}>2 Hours</Button>
+                    </ButtonGroup>
+                  </ButtonToolbar>
+                </Col>
+              </Row>
+              <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 40 + 'px' }}>
+                <ReactEcharts option={this.getParallel()} />
+              </div>
+            </CardBody>
+          </Card>
+        </Col>
+      </Row>
       </div>
       
     );
