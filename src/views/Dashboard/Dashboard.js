@@ -124,7 +124,7 @@ class Dashboard extends Component {
           }),
           datasets: [
             {
-              label: 'Normal Domain',
+              label: 'NxDomain',
               backgroundColor: hexToRgba(brandInfo, 10),
               borderColor: brandInfo,
               pointHoverBackgroundColor: '#fff',
@@ -132,7 +132,7 @@ class Dashboard extends Component {
               data: Data[0].map(x => x.doc_count),
             },
             {
-              label: 'NxDomain',
+              label: 'Normal Domain',
               backgroundColor: 'transparent',
               borderColor: brandSuccess,
               pointHoverBackgroundColor: '#fff',
