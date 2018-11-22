@@ -94,8 +94,6 @@ class Dashboard extends Component {
         this.setState({topType: type});
       });
     });
-
-    subscribeToTimer();
   }
 
   componentWillMount() {
@@ -121,6 +119,8 @@ class Dashboard extends Component {
         }]
       });
     }, 1000);
+
+    subscribeSocket();
   }
 
   onRadioBtnClick(radioSelected) {
@@ -532,11 +532,16 @@ function randomData() {
   }
 }
 
-function subscribeToTimer() {
+function subscribeSocket() {
+  socket.emit('subscribeToTimer', 1000);
   socket.on('timer', (timestamp) => {
     console.log(timestamp);
   });
-  socket.emit('subscribeToTimer', 1000);
+
+  socket.emit('subscribeToStream', 1000);
+  socket.on('stream', (data) => {
+    console.log(data);
+  });
 }
 
 export default Dashboard;
