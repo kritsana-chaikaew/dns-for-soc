@@ -1,9 +1,7 @@
-import React, { Component, lazy, Suspense } from 'react';
-import { Bar, Line } from 'react-chartjs-2';
+import React, { Component } from 'react';
+import { Line } from 'react-chartjs-2';
 import {
-  Badge,
   Button,
-  ButtonDropdown,
   ButtonGroup,
   ButtonToolbar,
   Card,
@@ -12,13 +10,8 @@ import {
   CardHeader,
   CardTitle,
   Col,
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownToggle,
   Progress,
   Row,
-  Table,
 } from 'reactstrap';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 import { getStyle, hexToRgba } from '@coreui/coreui/dist/js/coreui-utilities'
@@ -27,8 +20,6 @@ import echarts from 'echarts/lib/echarts';
 require('es6-promise').polyfill();
 require('isomorphic-fetch');
 
-// import Widget03 from '../../views/Widgets/Widget03'
-const Widget03 = lazy(() => import('../../views/Widgets/Widget03'));
 const Loading = () => <div>Loading...</div>
 
 const brandPrimary = getStyle('--primary')
@@ -36,6 +27,14 @@ const brandSuccess = getStyle('--success')
 const brandInfo = getStyle('--info')
 const brandWarning = getStyle('--warning')
 const brandDanger = getStyle('--danger')
+
+var data = [];
+var now = +new Date(1997, 9, 3);
+var oneDay = 24 * 3600 * 1000;
+var value = Math.random() * 1000;
+for (var i = 0; i < 1000; i++) {
+  data.push(randomData());
+}
 
 
 // Main Chart
@@ -101,11 +100,11 @@ class Dashboard extends Component {
       radioHealth: 2,
       topType: null,
       typeSelected: 'TXT',
+      realTimeNxNormal: [],
     };
   }
 
   fetchData () {
-    
     fetch('http://10.3.132.180:3000/nx?interval=' + this.state.nxInterval.toString())
     .then(function(response) {
         if (response.status >= 400) {
@@ -183,8 +182,30 @@ class Dashboard extends Component {
     });
   }
 
+  componentWillMount() {
+    console.log('willMount')
+    // this.initializeData();
+    clearInterval(this.interval);
+  }
+
   componentDidMount() {
+    let echarts_instance = this.echarts_react.getEchartsInstance();
+    console.log('didMount')
     this.fetchData();
+    setInterval(() => {
+      console.log('myInterval')
+      for (var i = 0; i < 5; i++) {
+        data.shift();
+        data.push(randomData());
+      }
+      console.log(data)
+
+      echarts_instance.setOption({
+        series: [{
+            data: data
+        }]
+      });
+    }, 1000);
   }
 
   toggle() {
@@ -373,7 +394,7 @@ class Dashboard extends Component {
       var minValue = Math.min(...tmp);
       var maxValue = Math.max(...tmp);
 
-      if (maxValue > 1000*minValue) {
+      if (maxValue > 50*minValue) {
         txtValue = tmp.map((x) => Math.log(x));
         logScale = true;
       } else {
@@ -420,6 +441,64 @@ class Dashboard extends Component {
     return option;
   }
 
+  getRealTimeNxNormal() {
+    console.log('getRealTime')
+
+    var option = {
+      title: {
+          text: '动态数据 + 时间坐标轴'
+      },
+      tooltip: {
+          trigger: 'axis',
+          formatter: function (params) {
+              params = params[0];
+              var date = new Date(params.name);
+              return date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ' : ' + params.value[1];
+          },
+          axisPointer: {
+              animation: false
+          }
+      },
+      xAxis: {
+          type: 'time',
+          splitLine: {
+              show: false
+          }
+      },
+      yAxis: {
+          type: 'value',
+          boundaryGap: [0, '100%'],
+          splitLine: {
+              show: false
+          }
+      },
+      dataZoom: [{
+          type: 'inside',
+          start: 0,
+          end: 10
+      },{
+          start: 0,
+          end: 10,
+          handleSize: '80%',
+          handleStyle: {
+              color: '#fff',
+              shadowBlur: 3,
+              shadowColor: 'rgba(0, 0, 0, 0.6)',
+              shadowOffsetX: 2,
+              shadowOffsetY: 2
+          }
+      }],
+      series: [{
+          name: '模拟数据',
+          type: 'line',
+          showSymbol: false,
+          hoverAnimation: false,
+          data: []
+      }]
+    };
+    return option
+  }
+
   render() {
     return (
       <div className="animated fadeIn">
@@ -432,17 +511,9 @@ class Dashboard extends Component {
                     <CardTitle className="mb-0">Normal and Nxdomain</CardTitle>
                     <div className="text-muted">3-7 November 2017</div>
                   </Col>
-                  <Col sm="7" className="d-none d-sm-inline-block">
-                    <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
-                      <ButtonGroup className="mr-3" aria-label="First group">
-                        <Button color="outline-secondary" onClick={() => this.onRadioBtnClick(1)} active={this.state.radioSelected === 1}>Minute</Button>
-                        <Button color="outline-secondary" onClick={() => this.onRadioBtnClick(2)} active={this.state.radioSelected === 2}>Hour</Button>
-                      </ButtonGroup>
-                    </ButtonToolbar>
-                  </Col>
                 </Row>
                 <div className="chart-wrapper" style={{ height: 300 + 'px', marginTop: 40 + 'px' }}>
-                  <Line data={this.state.mainChart} options={mainChartOpts} height={300} />
+                  <ReactEcharts ref={(e) => { this.echarts_react = e; }} option={this.getRealTimeNxNormal()} />
                 </div>
               </CardBody>
               <CardFooter>
@@ -538,6 +609,18 @@ function calculateHealth (error, normal) {
     result.push(error[i]/normal[i]);
   }
   return result;
+}
+
+function randomData() {
+  now = new Date(+now + oneDay);
+  value = value + Math.random() * 21 - 10;
+  return {
+      name: now.toString(),
+      value: [
+          [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('/'),
+          Math.abs(Math.round(value))
+      ]
+  }
 }
 
 export default Dashboard;
