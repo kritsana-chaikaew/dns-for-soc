@@ -49,18 +49,20 @@ class Dashboard extends Component {
 
   async fetchData () {
      try {
-      let [nx, normal, error, topType] = await Promise.all([
+      let responses = await Promise.all([
         fetch('http://10.3.132.180:3000/nx?interval=' + this.state.nxInterval.toString()),
         fetch('http://10.3.132.180:3000/normal?interval='+this.state.healthInterval),
         fetch('http://10.3.132.180:3000/error?interval='+this.state.healthInterval),
         fetch('http://10.3.132.180:3000/type?type='+this.state.typeSelected)
       ]);
 
+      let [nx, normal, error, topType] = await Promise.all(responses.map(res => res.json()))
+
       this.setState({
-        nx: await nx.json(),
-        normal: await normal.json(),
-        error: await error.json(),
-        topType: await topType.json()
+        nx,
+        normal,
+        error,
+        topType
       });
     }
     catch(err) {
@@ -145,7 +147,6 @@ class Dashboard extends Component {
       const hour = timestamp.map(x => getHourOfDay(x));
       const health = calculateHealth(error, normal);
 
-      // [time, day, size]
       const table = new Array(7);
       for (var i=0; i<table.length; i++) {
         table[i] = new Array(24);
