@@ -21,13 +21,9 @@ const socket = openSocket('http://10.3.132.180:3000');
 
 const Loading = () => <div>Loading...</div>
 
-var data = [];
-var now = +new Date(1997, 9, 3);
-var oneDay = 24 * 3600 * 1000;
-var value = Math.random() * 1000;
-for (var i = 0; i < 1000; i++) {
-  data.push(randomData());
-}
+var normal = [];
+var nxdomain = [];
+var queryInterval = 60000
 
 class Dashboard extends Component {
   constructor(props) {
@@ -79,21 +75,8 @@ class Dashboard extends Component {
     let echarts_instance = this.echarts_react.getEchartsInstance();
     console.log('didMount')
     this.fetchData();
-    setInterval(() => {
-      console.log('myInterval')
-      for (var i = 0; i < 5; i++) {
-        data.shift();
-        data.push(randomData());
-      }
 
-      echarts_instance.setOption({
-        series: [{
-            data: data
-        }]
-      });
-    }, 1000);
-
-    subscribeSocket();
+    subscribeSocket(echarts_instance);
   }
 
   onRadioBtnClick(radioSelected) {
@@ -327,15 +310,10 @@ class Dashboard extends Component {
 
     var option = {
       title: {
-          text: '动态数据 + 时间坐标轴'
+          text: 'Type Count'
       },
       tooltip: {
           trigger: 'axis',
-          formatter: function (params) {
-              params = params[0];
-              var date = new Date(params.name);
-              return date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ' : ' + params.value[1];
-          },
           axisPointer: {
               animation: false
           }
@@ -369,13 +347,22 @@ class Dashboard extends Component {
               shadowOffsetY: 2
           }
       }],
-      series: [{
-          name: '模拟数据',
+      series: [
+        {
+          name: 'Normal',
           type: 'line',
           showSymbol: false,
           hoverAnimation: false,
           data: []
-      }]
+        },
+        {
+          name: 'NXDOMAIN',
+          type: 'line',
+          showSymbol: false,
+          hoverAnimation: false,
+          data: []
+        }
+    ]
     };
     return option
   }
@@ -492,27 +479,42 @@ function calculateHealth (error, normal) {
   return result;
 }
 
-function randomData() {
-  now = new Date(+now + oneDay);
-  value = value + Math.random() * 21 - 10;
-  return {
-      name: now.toString(),
+function subscribeSocket(echarts_instance) {
+  socket.emit('subscribeToStream', {startTime: 1509693769000, queryInterval: 60000, interval: 50});
+  socket.on('stream', (result) => {
+    console.log(result);
+
+    if (normal.length > 1000) {
+      for (var i=0; i<5;i++) {
+        normal.shift();
+        nxdomain.shift();
+      }
+    }
+  
+    normal.push({
       value: [
-          [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('/'),
-          Math.abs(Math.round(value))
+        result.timestamp,
+        result.NORMAL
       ]
-  }
-}
+    });
 
-function subscribeSocket() {
-  socket.emit('subscribeToTimer', 1000);
-  socket.on('timer', (timestamp) => {
-    console.log(timestamp);
-  });
+    nxdomain.push({
+      value: [
+        result.timestamp,
+        result.NXDOMAIN
+      ]
+    });
 
-  socket.emit('subscribeToStream', 1000);
-  socket.on('stream', (data) => {
-    console.log(data);
+    echarts_instance.setOption({
+      series: [
+        {
+          data: normal
+        },
+        {
+          data: nxdomain
+        }
+      ]
+    });
   });
 }
 
