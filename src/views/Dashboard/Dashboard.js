@@ -22,12 +22,6 @@ require('isomorphic-fetch');
 
 const Loading = () => <div>Loading...</div>
 
-const brandPrimary = getStyle('--primary')
-const brandSuccess = getStyle('--success')
-const brandInfo = getStyle('--info')
-const brandWarning = getStyle('--warning')
-const brandDanger = getStyle('--danger')
-
 var data = [];
 var now = +new Date(1997, 9, 3);
 var oneDay = 24 * 3600 * 1000;
@@ -37,62 +31,12 @@ for (var i = 0; i < 1000; i++) {
 }
 
 
-// Main Chart
-const mainChartOpts = {
-  tooltips: {
-    enabled: false,
-    custom: CustomTooltips,
-    intersect: true,
-    mode: 'index',
-    position: 'nearest',
-    callbacks: {
-      labelColor: function(tooltipItem, chart) {
-        return { backgroundColor: chart.data.datasets[tooltipItem.datasetIndex].borderColor }
-      }
-    }
-  },
-  maintainAspectRatio: false,
-  legend: {
-    display: false,
-  },
-  scales: {
-    xAxes: [
-      {
-        gridLines: {
-          drawOnChartArea: false,
-        },
-      }],
-    yAxes: [
-      {
-        ticks: {
-          beginAtZero: true,
-          maxTicksLimit: 5,
-          stepSize: Math.ceil(350000 / 5),
-          max: 350000,
-        },
-      }],
-  },
-  elements: {
-    point: {
-      radius: 0,
-      hitRadius: 10,
-      hoverRadius: 4,
-      hoverBorderWidth: 3,
-    },
-  },
-};
-
 class Dashboard extends Component {
   constructor(props) {
     super(props);
 
-    this.toggle = this.toggle.bind(this);
-    this.onRadioBtnClick = this.onRadioBtnClick.bind(this);
-
     this.state = {
-      dropdownOpen: false,
       radioSelected: 2,
-      mainChart: null,
       nxInterval: '1h',
       normal: null,
       error: null,
@@ -111,38 +55,6 @@ class Dashboard extends Component {
             throw new Error("Bad response from server");
         }
         return response.json();
-    })
-    .then(Data => {
-      this.setState({
-        mainChart: {
-          labels: Data[0].map(x => {
-            var Num = parseFloat(x.key_as_string);
-            var date = new Date(Num*1000);
-            var hours = date.getHours();
-            var minutes = "0" + date.getMinutes();
-            var formattedTime = hours + ':' + minutes.substr(-2);
-            return formattedTime;
-          }),
-          datasets: [
-            {
-              label: 'NxDomain',
-              backgroundColor: hexToRgba(brandInfo, 10),
-              borderColor: brandInfo,
-              pointHoverBackgroundColor: '#fff',
-              borderWidth: 2,
-              data: Data[0].map(x => x.doc_count),
-            },
-            {
-              label: 'Normal Domain',
-              backgroundColor: 'transparent',
-              borderColor: brandSuccess,
-              pointHoverBackgroundColor: '#fff',
-              borderWidth: 2,
-              data: Data[1].map(x => x.doc_count),
-            },
-          ],
-        },
-      })
     })
     .then(() => {
       fetch('http://10.3.132.180:3000/normal?interval='+this.state.healthInterval)
@@ -184,7 +96,6 @@ class Dashboard extends Component {
 
   componentWillMount() {
     console.log('willMount')
-    // this.initializeData();
     clearInterval(this.interval);
   }
 
@@ -206,12 +117,6 @@ class Dashboard extends Component {
         }]
       });
     }, 1000);
-  }
-
-  toggle() {
-    this.setState({
-      dropdownOpen: !this.state.dropdownOpen,
-    });
   }
 
   onRadioBtnClick(radioSelected) {
