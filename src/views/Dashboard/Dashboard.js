@@ -17,8 +17,10 @@ import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 import { getStyle, hexToRgba } from '@coreui/coreui/dist/js/coreui-utilities'
 import ReactEcharts from 'echarts-for-react';
 import echarts from 'echarts/lib/echarts';
+import openSocket from 'socket.io-client';
 require('es6-promise').polyfill();
 require('isomorphic-fetch');
+const socket = openSocket('http://10.3.132.180:3000');
 
 const Loading = () => <div>Loading...</div>
 
@@ -92,6 +94,8 @@ class Dashboard extends Component {
         this.setState({topType: type});
       });
     });
+
+    subscribeToTimer();
   }
 
   componentWillMount() {
@@ -526,6 +530,13 @@ function randomData() {
           Math.abs(Math.round(value))
       ]
   }
+}
+
+function subscribeToTimer() {
+  socket.on('timer', (timestamp) => {
+    console.log(timestamp);
+  });
+  socket.emit('subscribeToTimer', 1000);
 }
 
 export default Dashboard;
