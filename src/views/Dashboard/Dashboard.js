@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { Line } from 'react-chartjs-2';
 import {
   Button,
   ButtonGroup,
@@ -13,8 +12,6 @@ import {
   Progress,
   Row,
 } from 'reactstrap';
-import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
-import { getStyle, hexToRgba } from '@coreui/coreui/dist/js/coreui-utilities'
 import ReactEcharts from 'echarts-for-react';
 import echarts from 'echarts/lib/echarts';
 import openSocket from 'socket.io-client';
@@ -32,12 +29,12 @@ for (var i = 0; i < 1000; i++) {
   data.push(randomData());
 }
 
-
 class Dashboard extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
+      nx: null,
       radioSelected: 2,
       nxInterval: '1h',
       normal: null,
@@ -50,50 +47,25 @@ class Dashboard extends Component {
     };
   }
 
-  fetchData () {
-    fetch('http://10.3.132.180:3000/nx?interval=' + this.state.nxInterval.toString())
-    .then(function(response) {
-        if (response.status >= 400) {
-            throw new Error("Bad response from server");
-        }
-        return response.json();
-    })
-    .then(() => {
-      fetch('http://10.3.132.180:3000/normal?interval='+this.state.healthInterval)
-      .then(function(response) {
-          if (response.status >= 400) {
-              throw new Error("Bad response from server");
-          }
-          return response.json();
-      })
-      .then(normal => {
-        this.setState({normal: normal});
+  async fetchData () {
+     try {
+      let [nx, normal, error, topType] = await Promise.all([
+        fetch('http://10.3.132.180:3000/nx?interval=' + this.state.nxInterval.toString()),
+        fetch('http://10.3.132.180:3000/normal?interval='+this.state.healthInterval),
+        fetch('http://10.3.132.180:3000/error?interval='+this.state.healthInterval),
+        fetch('http://10.3.132.180:3000/type?type='+this.state.typeSelected)
+      ]);
+
+      this.setState({
+        nx: await nx.json(),
+        normal: await normal.json(),
+        error: await error.json(),
+        topType: await topType.json()
       });
-    })
-    .then(() => {
-      fetch('http://10.3.132.180:3000/error?interval='+this.state.healthInterval)
-      .then(function(response) {
-          if (response.status >= 400) {
-              throw new Error("Bad response from server");
-          }
-          return response.json();
-      })
-      .then(error => {
-        this.setState({error: error});
-      });
-    })
-    .then(() => {
-      fetch('http://10.3.132.180:3000/type?type='+this.state.typeSelected)
-      .then((response) => {
-        if (response.status >= 400) {
-          throw new Error("Bad response from server");
-        }
-        return response.json();
-      })
-      .then((type) => {
-        this.setState({topType: type});
-      });
-    });
+    }
+    catch(err) {
+      console.log(err);
+    };
   }
 
   componentWillMount() {
@@ -111,7 +83,6 @@ class Dashboard extends Component {
         data.shift();
         data.push(randomData());
       }
-      console.log(data)
 
       echarts_instance.setOption({
         series: [{
