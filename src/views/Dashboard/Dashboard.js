@@ -30,7 +30,6 @@ class Dashboard extends Component {
     super(props);
 
     this.state = {
-      nx: null,
       radioSelected: 2,
       nxInterval: '1h',
       normal: null,
@@ -42,20 +41,18 @@ class Dashboard extends Component {
       realTimeNxNormal: [],
     };
   }
-
+  
   async fetchData () {
      try {
       let responses = await Promise.all([
-        fetch('http://10.3.132.180:3000/nx?interval=' + this.state.nxInterval.toString()),
         fetch('http://10.3.132.180:3000/normal?interval='+this.state.healthInterval),
         fetch('http://10.3.132.180:3000/error?interval='+this.state.healthInterval),
         fetch('http://10.3.132.180:3000/type?type='+this.state.typeSelected)
       ]);
 
-      let [nx, normal, error, topType] = await Promise.all(responses.map(res => res.json()))
+      let [normal, error, topType] = await Promise.all(responses.map(res => res.json()))
 
       this.setState({
-        nx,
         normal,
         error,
         topType
@@ -79,25 +76,11 @@ class Dashboard extends Component {
     subscribeSocket(echarts_instance);
   }
 
-  onRadioBtnClick(radioSelected) {
-    var interval = '1h';
-    if (radioSelected == 1) {
-      interval = '5m';
-    } else if (radioSelected == 2) {
-      interval = '1h'
-    }
-    this.setState({
-      nxInterval: interval,
-      radioSelected: radioSelected,
-    });
-    this.fetchData();
-  }
-
   onHealthBtnClick(radioHealth) {
     var interval = '2h';
-    if (radioHealth == 1) {
+    if (radioHealth === 1) {
       interval = '1h';
-    } else if (radioHealth == 2) {
+    } else if (radioHealth === 2) {
       interval = '2h'
     }
     this.setState({
@@ -114,6 +97,7 @@ class Dashboard extends Component {
 
   getOption() {
     const data = [];
+    const dataTop = [];
     const hours = [
       '00', '01', '02', '03', '04', '05', 
       '06', '07', '08', '09', '10', '11',
@@ -142,7 +126,11 @@ class Dashboard extends Component {
 
       for (var i=0; i<table.length; i++) {
         for (var j=0; j<table[i].length; j++) {
-          data.push([j, i, table[i][j]]);
+          if (table[i][j] > 0.3) {
+            dataTop.push([j, i, table[i][j]]);
+          } else {
+            data.push([j, i, table[i][j]]);
+          }
         }
       }
 
@@ -158,7 +146,7 @@ class Dashboard extends Component {
       tooltip: {
           position: 'top',
           formatter: function (params) {
-              return params.value[2] + ' score ' + hours[params.value[0]] + ' of ' + days[params.value[1]];
+              return ' score ' + hours[params.value[0]] + ' of ' + days[params.value[1]];
           }
       },
       grid: {
@@ -191,7 +179,7 @@ class Dashboard extends Component {
       },
       series: [{
           name: 'Health',
-          type: 'effectScatter',
+          type: 'scatter',
           symbolSize: function (val) {
               return val[2] * 70;
           },
@@ -206,44 +194,42 @@ class Dashboard extends Component {
                 shadowOffsetY: 5,
                 color: new echarts.graphic.RadialGradient(0.4, 0.3, 1, [{
                     offset: 0,
-                    color: 'rgb(231, 76, 60)'
+                    color: 'rgb(220, 53, 69)'
                 }, {
                     offset: 1,
-                    color: 'rgb(231, 76, 60)'
+                    color: 'rgb(220, 53, 69)'
                 }])
             }
+          },
         },
-      }]
+        {
+          name: 'Health',
+          type: 'effectScatter',
+          symbolSize: function (val) {
+              return val[2] * 70;
+          },
+          data: dataTop,
+          animationDelay: function (idx) {
+              return idx * 5;
+          },
+          itemStyle: {
+            normal: {
+                shadowBlur: 10,
+                shadowColor: 'rgba(120, 36, 50, 0.2)',
+                shadowOffsetY: 5,
+                color: new echarts.graphic.RadialGradient(0.4, 0.3, 1, [{
+                    offset: 0,
+                    color: 'rgb(220, 53, 69)'
+                }, {
+                    offset: 1,
+                    color: 'rgb(220, 53, 69)'
+                }])
+            }
+          },
+        }
+    ]
     };
 
-    return option;
-  }
-
-  getParallel(){
-    var option = {
-      parallelAxis: [
-          {dim: 0, name: 'Client IP'},
-          {dim: 1, name: 'DNS Server IP'},
-          {dim: 2, name: 'Type'},
-          {
-              dim: 3,
-              name: 'Answer',
-              type: 'category',
-              data: ['Excellent', 'Good', 'OK', 'Bad']
-          }
-      ],
-      series: {
-          type: 'parallel',
-          lineStyle: {
-              width: 4
-          },
-          data: [
-              [129, 100, 82, 'Good'],
-              [9.99, 80, 77, 'OK'],
-              [20, 120, 60, 'Excellent']
-            ]
-          }
-        };
     return option;
   }
 
@@ -298,7 +284,8 @@ class Dashboard extends Component {
           {
               name: 'Data',
               type: 'bar',
-              data: txtValue
+              data: txtValue,
+              color: 'rgb(23, 162, 184)'
           }
       ]
     };
@@ -309,14 +296,17 @@ class Dashboard extends Component {
     console.log('getRealTime')
 
     var option = {
-      title: {
-          text: 'Type Count'
-      },
       tooltip: {
           trigger: 'axis',
           axisPointer: {
               animation: false
           }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '20%',
+        containLabel: true
       },
       xAxis: {
           type: 'time',
@@ -326,15 +316,15 @@ class Dashboard extends Component {
       },
       yAxis: {
           type: 'value',
-          boundaryGap: [0, '100%'],
+          boundaryGap: [0, '30%'],
           splitLine: {
               show: false
           }
       },
       dataZoom: [{
           type: 'inside',
-          start: 0,
-          end: 10
+          start: 70,
+          end: 100
       },{
           start: 0,
           end: 10,
@@ -353,14 +343,16 @@ class Dashboard extends Component {
           type: 'line',
           showSymbol: false,
           hoverAnimation: false,
-          data: []
+          data: [],
+          color: 'rgb(77, 189, 116)'
         },
         {
           name: 'NXDOMAIN',
           type: 'line',
           showSymbol: false,
           hoverAnimation: false,
-          data: []
+          data: [],
+          color: 'rgb(248, 108, 107)'
         }
     ]
     };
@@ -380,7 +372,7 @@ class Dashboard extends Component {
                     <div className="text-muted">3-7 November 2017</div>
                   </Col>
                 </Row>
-                <div className="chart-wrapper" style={{ height: 300 + 'px', marginTop: 40 + 'px' }}>
+                <div className="chart-wrapper" style={{ height: 300 + 'px', marginTop: 0 + 'px' }}>
                   <ReactEcharts ref={(e) => { this.echarts_react = e; }} option={this.getRealTimeNxNormal()} />
                 </div>
               </CardBody>
@@ -392,7 +384,7 @@ class Dashboard extends Component {
                   </Col>
                   <Col sm={12} md className="mb-sm-2 mb-0 d-md-down-none">
                     <strong>Nxdomain</strong>
-                    <Progress className="progress-xs mt-2" color="info" value="50" />
+                    <Progress className="progress-xs mt-2" color="danger" value="50" />
                   </Col>
                 </Row>
               </CardFooter>
@@ -415,7 +407,7 @@ class Dashboard extends Component {
                     </ButtonToolbar>
                   </Col>
                 </Row>
-                <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 40 + 'px' }}>
+                <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 0 + 'px' }}>
                   <ReactEcharts option={this.getOption()} />
                 </div>
               </CardBody>
@@ -448,7 +440,7 @@ class Dashboard extends Component {
                     </ButtonToolbar>
                   </Col>
                 </Row>
-                <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 40 + 'px' }}>
+                <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 0 + 'px' }}>
                   <ReactEcharts option={this.getTop()} />
                 </div>
               </CardBody>
@@ -480,28 +472,34 @@ function calculateHealth (error, normal) {
 }
 
 function subscribeSocket(echarts_instance) {
-  socket.emit('subscribeToStream', {startTime: 1509693769000, queryInterval: 60000, interval: 50});
+  socket.emit('subscribeToStream', {startTime: 1509693769000, queryInterval: 1000, interval: 1000});
   socket.on('stream', (result) => {
-    console.log(result);
-
     if (normal.length > 1000) {
       for (var i=0; i<5;i++) {
         normal.shift();
         nxdomain.shift();
       }
     }
-  
+    
+    var norm = 0;
+    if (result.NORMAL != null) {
+      norm = result.NORMAL;
+    }
     normal.push({
       value: [
         result.timestamp,
-        result.NORMAL
+        norm
       ]
     });
 
+    var nx = 0;
+    if (result.NXDOMAIN != null) {
+      nx = result.NXDOMAIN;
+    }
     nxdomain.push({
       value: [
         result.timestamp,
-        result.NXDOMAIN
+        nx 
       ]
     });
 
