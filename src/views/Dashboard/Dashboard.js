@@ -238,8 +238,14 @@ class Dashboard extends Component {
     var txtValue = [];
     var logScale = false;
     try {
-      txtKey = this.state.topType.map((x) => x.key);
-      var tmp = this.state.topType.map((x) => x.doc_count);
+      txtKey = this.state.topType.map((x) => {
+        if (x.key.length > 20) {
+          return x.key.slice(0,20).toString() + "..."
+        } else {
+          return x.key
+        }
+      }).reverse();
+      var tmp = this.state.topType.map((x) => x.doc_count).reverse();
 
       var minValue = Math.min(...tmp);
       var maxValue = Math.max(...tmp);
@@ -268,13 +274,14 @@ class Dashboard extends Component {
       },
       grid: {
           left: '3%',
-          right: '4%',
-          bottom: '3%',
+          right: '3%',
+          bottom: '0%',
+          top: '10%',
           containLabel: true
       },
       xAxis: {
           type: 'value',
-          boundaryGap: [0, 0.01]
+          boundaryGap: [0, 0]
       },
       yAxis: {
           type: 'category',
@@ -399,12 +406,6 @@ class Dashboard extends Component {
                     <div className="text-muted">3-7 November 2017</div>
                   </Col>
                   <Col sm="7" className="d-none d-sm-inline-block">
-                    <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
-                      <ButtonGroup className="mr-3" aria-label="First group">
-                        <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(1)} active={this.state.radioHealth === 1}>1 Hour</Button>
-                        <Button color="outline-secondary" onClick={() => this.onHealthBtnClick(2)} active={this.state.radioHealth === 2}>2 Hours</Button>
-                      </ButtonGroup>
-                    </ButtonToolbar>
                   </Col>
                 </Row>
                 <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 0 + 'px' }}>
@@ -440,8 +441,8 @@ class Dashboard extends Component {
                     </ButtonToolbar>
                   </Col>
                 </Row>
-                <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 0 + 'px' }}>
-                  <ReactEcharts option={this.getTop()} />
+                <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 0 + 'px'}}>
+                  <ReactEcharts option={this.getTop()} style={{ height: '100%', marginTop: 0 + 'px'}}/>
                 </div>
               </CardBody>
             </Card>
