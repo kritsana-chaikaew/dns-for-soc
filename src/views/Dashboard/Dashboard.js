@@ -11,6 +11,11 @@ import {
   Col,
   Progress,
   Row,
+  Table,
+  Badge,
+  Pagination,
+  PaginationItem,
+  PaginationLink
 } from 'reactstrap';
 import ReactEcharts from 'echarts-for-react';
 import echarts from 'echarts/lib/echarts';
@@ -21,9 +26,8 @@ const socket = openSocket('http://10.3.132.180:3000');
 
 const Loading = () => <div>Loading...</div>
 
-var normal = [];
-var nxdomain = [];
-var queryInterval = 60000
+var normalCount = [];
+var nxdomainCount = [];
 
 class Dashboard extends Component {
   constructor(props) {
@@ -39,6 +43,7 @@ class Dashboard extends Component {
       topType: null,
       typeSelected: 'TXT',
       realTimeNxNormal: [],
+      dga: [],
     };
   }
   
@@ -47,16 +52,19 @@ class Dashboard extends Component {
       let responses = await Promise.all([
         fetch('http://10.3.132.180:3000/normal?interval='+this.state.healthInterval),
         fetch('http://10.3.132.180:3000/error?interval='+this.state.healthInterval),
-        fetch('http://10.3.132.180:3000/type?type='+this.state.typeSelected)
+        fetch('http://10.3.132.180:3000/type?type='+this.state.typeSelected),
+        fetch('http://10.3.132.180:3000/dga')
       ]);
 
-      let [normal, error, topType] = await Promise.all(responses.map(res => res.json()))
+      let [normal, error, topType, dga] = await Promise.all(responses.map(res => res.json()))
 
       this.setState({
         normal,
         error,
-        topType
+        topType,
+        dga
       });
+      console.log(this.state.dga);
     }
     catch(err) {
       console.log(err);
@@ -64,15 +72,12 @@ class Dashboard extends Component {
   }
 
   componentWillMount() {
-    console.log('willMount')
     clearInterval(this.interval);
   }
 
   componentDidMount() {
     let echarts_instance = this.echarts_react.getEchartsInstance();
-    console.log('didMount')
     this.fetchData();
-
     subscribeSocket(echarts_instance);
   }
 
@@ -107,33 +112,37 @@ class Dashboard extends Component {
       'Wednesday', 'Tuesday', 'Monday', 'Sunday'];
 
     try {
-      const normal = this.state.normal.map(x => x.doc_count);
-      const error = this.state.error.map(x => x.doc_count);
-      const timestamp = this.state.normal.map(x => x.key/1000);
+      // const normal = this.state.normal.map(x => x.doc_count);
+      // const error = this.state.error.map(x => x.doc_count);
+      var ts = this.state.error.map(x => x.key).concat(this.state.normal.map(x => x.key));
+      let timestamp = [...new Set(ts)];
+      console.log('len', timestamp.length)
+      timestamp.sort();
+      var normalMap = this.state.normal.reduce((o, x) => ({...o, [x.key]: x.doc_count}), {});
+      var errorMap = this.state.error.reduce((o, x) => ({...o, [x.key]: x.doc_count}), {});
       const day = timestamp.map(x => getDayOfWeek(x));
       const hour = timestamp.map(x => getHourOfDay(x));
-      const health = calculateHealth(error, normal);
 
-      const table = new Array(7);
-      for (var i=0; i<table.length; i++) {
-        table[i] = new Array(24);
-        table[i] = table[i].fill(0);
-      }
-
-      for (var i=0; i<health.length; i++) {
-        table[day[i]][hour[i]] = health[i] + table[day[i]][hour[i]];
-      }
-
-      for (var i=0; i<table.length; i++) {
-        for (var j=0; j<table[i].length; j++) {
-          if (table[i][j] > 0.3) {
-            dataTop.push([j, i, table[i][j]]);
+      for (var i=0; i< timestamp.length; i++) {
+        var n = 0;
+        if (normalMap[timestamp[i]]) {
+          n = normalMap[timestamp[i]]
+        }
+        var e = 0
+        if (errorMap[timestamp[i]]) {
+          e = errorMap[timestamp[i]]
+        }
+        if (n==0) {
+          data.push([hour[i], day[i], 0])
+        } else {
+          var val = Math.log(e*100/n)/Math.log(10)/1.849*0.5
+          if (val>=0.4) {
+            dataTop.push([hour[i], day[i], val])
           } else {
-            data.push([j, i, table[i][j]]);
+            data.push([hour[i], day[i], val])
           }
         }
       }
-
     } catch (err) {
       console.log(err.message);
     }
@@ -146,7 +155,7 @@ class Dashboard extends Component {
       tooltip: {
           position: 'top',
           formatter: function (params) {
-              return ' score ' + hours[params.value[0]] + ' of ' + days[params.value[1]];
+              return ' score ' + params.value[2].toFixed(2);
           }
       },
       grid: {
@@ -181,7 +190,7 @@ class Dashboard extends Component {
           name: 'Health',
           type: 'scatter',
           symbolSize: function (val) {
-              return val[2] * 70;
+              return val[2] * 50;
           },
           data: data,
           animationDelay: function (idx) {
@@ -189,24 +198,31 @@ class Dashboard extends Component {
           },
           itemStyle: {
             normal: {
-                shadowBlur: 10,
-                shadowColor: 'rgba(120, 36, 50, 0.2)',
-                shadowOffsetY: 5,
-                color: new echarts.graphic.RadialGradient(0.4, 0.3, 1, [{
-                    offset: 0,
-                    color: 'rgb(220, 53, 69)'
-                }, {
-                    offset: 1,
-                    color: 'rgb(220, 53, 69)'
-                }])
-            }
+              shadowBlur: 20,
+              shadowColor: 'rgba(183,28,28,0.5)',
+              shadowOffsetY: 5,
+              color: function (value) {
+                var weight = 0;
+                if (value['data'] != undefined) {
+                  weight = value['data'][2];
+                }
+                return new echarts.graphic.RadialGradient(0.5, 0.5, weight*1.5, [{
+                      offset: 0,
+                      color: 'rgb(230,28,28)'
+                  }, {
+                      offset: 1,
+                      color: 'rgb(230,28,28)'
+                  }
+                ]);
+              }
+            },
           },
         },
         {
           name: 'Health',
           type: 'effectScatter',
           symbolSize: function (val) {
-              return val[2] * 70;
+              return val[2] * 50;
           },
           data: dataTop,
           animationDelay: function (idx) {
@@ -214,16 +230,23 @@ class Dashboard extends Component {
           },
           itemStyle: {
             normal: {
-                shadowBlur: 10,
-                shadowColor: 'rgba(120, 36, 50, 0.2)',
-                shadowOffsetY: 5,
-                color: new echarts.graphic.RadialGradient(0.4, 0.3, 1, [{
-                    offset: 0,
-                    color: 'rgb(220, 53, 69)'
-                }, {
-                    offset: 1,
-                    color: 'rgb(220, 53, 69)'
-                }])
+              shadowBlur: 20,
+              shadowColor: 'rgba(183,28,28,0.5)',
+              shadowOffsetY: 5,
+              color: function (value) {
+                var weight = 0;
+                if (value['data'] != undefined) {
+                  weight = value['data'][2];
+                }
+                return new echarts.graphic.RadialGradient(0.5, 0.5, weight*1.5, [{
+                      offset: 0,
+                      color: 'rgb(230,28,28)'
+                  }, {
+                      offset: 1,
+                      color: 'rgb(230,28,28)'
+                  }
+                ]);
+              }
             }
           },
         }
@@ -300,7 +323,6 @@ class Dashboard extends Component {
   }
 
   getRealTimeNxNormal() {
-    console.log('getRealTime')
 
     var option = {
       tooltip: {
@@ -448,6 +470,50 @@ class Dashboard extends Component {
             </Card>
           </Col>
         </Row>
+        <Row>
+          <Col>
+            <Card>
+              <CardHeader>
+                <i className="fa fa-align-justify"></i> DGA
+              </CardHeader>
+              <CardBody >
+                <Table hover responsive className="table-outline mb-0 d-none d-sm-table">
+                  <thead>
+                    <tr>
+                      <th>Domain Name</th>
+                      <th>IP</th>
+                      <th>Talker</th>
+                      <th>Type</th>
+                      <th>Score</th>
+                      <th>Date</th>
+                      <th>Time</th>
+                      <th>Suspected</th>
+
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {
+                      this.state.dga.map((row) => {
+                        return  <tr>
+                                  <td>{row[0]}</td>
+                                  <td>{row[1]}</td>
+                                  <td>{row[2]}</td>
+                                  <td>{row[3]}</td>
+                                  <td>{row[4]}</td>
+                                  <td>{row[5]}</td>
+                                  <td>{row[6]}</td>
+                                  <td>
+                                    <Badge color="danger">High</Badge>
+                                  </td>
+                                </tr>
+                      })
+                    }
+                  </tbody>
+                </Table>
+              </CardBody>
+            </Card>
+          </Col>
+        </Row>        
       </div>
       
     );
@@ -455,12 +521,12 @@ class Dashboard extends Component {
 }
 
 function getDayOfWeek (timestamp) {
-  var date = new Date(timestamp*1000);
-  return date.getDay();
+  var date = new Date(timestamp);
+  return 6-date.getDay();
 }
 
 function getHourOfDay (timestamp) {
-  var date = new Date(timestamp*1000);
+  var date = new Date(timestamp);
   return date.getHours();
 }
 
@@ -473,12 +539,22 @@ function calculateHealth (error, normal) {
 }
 
 function subscribeSocket(echarts_instance) {
-  socket.emit('subscribeToStream', {startTime: 1509693769000, queryInterval: 1000, interval: 1000});
+  socket.on('prev', (previousData) => {
+    if (normalCount.length == 0) {
+      normalCount = previousData.map((v) => {
+        return {value: [v.timestamp, v.NORMAL]}
+      });
+      nxdomainCount = previousData.map((v) => {
+        return {value: [v.timestamp, v.NXDOMAIN]}
+      });
+    }
+  });
+  socket.emit('subscribeToStream', {startTime: 1509694769000, queryInterval: 1000, interval: 1000});
   socket.on('stream', (result) => {
-    if (normal.length > 1000) {
+    if (normalCount.length > 1000) {
       for (var i=0; i<5;i++) {
-        normal.shift();
-        nxdomain.shift();
+        normalCount.shift();
+        normalCount.shift();
       }
     }
     
@@ -486,7 +562,7 @@ function subscribeSocket(echarts_instance) {
     if (result.NORMAL != null) {
       norm = result.NORMAL;
     }
-    normal.push({
+    normalCount.push({
       value: [
         result.timestamp,
         norm
@@ -497,7 +573,7 @@ function subscribeSocket(echarts_instance) {
     if (result.NXDOMAIN != null) {
       nx = result.NXDOMAIN;
     }
-    nxdomain.push({
+    nxdomainCount.push({
       value: [
         result.timestamp,
         nx 
@@ -507,10 +583,10 @@ function subscribeSocket(echarts_instance) {
     echarts_instance.setOption({
       series: [
         {
-          data: normal
+          data: normalCount
         },
         {
-          data: nxdomain
+          data: nxdomainCount
         }
       ]
     });
