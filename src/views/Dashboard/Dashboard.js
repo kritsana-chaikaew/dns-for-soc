@@ -95,9 +95,21 @@ class Dashboard extends Component {
     this.fetchData();
   }
 
-  onTypeClick(type) {
-    this.setState({typeSelected: type});
-    this.fetchData();
+  async onTypeClick(type) {
+    try {
+      let responses = await Promise.all([
+        fetch('http://10.3.132.180:3000/type?type='+type)
+      ]);
+
+      let [topType] = await Promise.all(responses.map(res => res.json()))
+
+      this.setState({
+        typeSelected: type, 
+        topType: topType});
+    }
+    catch(err) {
+      console.log(err);
+    };
   }
 
   getOption() {
@@ -394,13 +406,11 @@ class Dashboard extends Component {
         <Row>
           <Col>
             <Card>
+              <CardHeader>
+                Success and NXDOMAIN
+                <div className="text-muted">3-7 November 2017</div>
+              </CardHeader>
               <CardBody>
-                <Row>
-                  <Col sm="5">
-                    <CardTitle className="mb-0">Normal and Nxdomain</CardTitle>
-                    <div className="text-muted">3-7 November 2017</div>
-                  </Col>
-                </Row>
                 <div className="chart-wrapper" style={{ height: 300 + 'px', marginTop: 0 + 'px' }}>
                   <ReactEcharts ref={(e) => { this.echarts_react = e; }} option={this.getRealTimeNxNormal()} />
                 </div>
@@ -408,11 +418,11 @@ class Dashboard extends Component {
               <CardFooter>
                 <Row className="text-center">
                   <Col sm={12} md className="mb-sm-2 mb-0">
-                    <strong>Normal</strong>
+                    <strong>Success</strong>
                     <Progress className="progress-xs mt-2" color="success" value="50" />
                   </Col>
                   <Col sm={12} md className="mb-sm-2 mb-0 d-md-down-none">
-                    <strong>Nxdomain</strong>
+                    <strong>NXDOMAIN</strong>
                     <Progress className="progress-xs mt-2" color="danger" value="50" />
                   </Col>
                 </Row>
@@ -421,15 +431,11 @@ class Dashboard extends Component {
           </Col>
           <Col>
             <Card>
+              <CardHeader>
+                Traffic Health
+                <div className="text-muted">3-7 November 2017</div>
+              </CardHeader>
               <CardBody>
-                <Row>
-                  <Col sm="5">
-                    <CardTitle className="mb-0">Traffic Health</CardTitle>
-                    <div className="text-muted">3-7 November 2017</div>
-                  </Col>
-                  <Col sm="7" className="d-none d-sm-inline-block">
-                  </Col>
-                </Row>
                 <div className="chart-wrapper" style={{ height: 366 + 'px', marginTop: 0 + 'px' }}>
                   <ReactEcharts option={this.getOption()} />
                 </div>
@@ -440,15 +446,15 @@ class Dashboard extends Component {
         <Row>
           <Col>
             <Card>
+              <CardHeader>
+              Top Queries by Type
+                <div className="text-muted">3-7 November 2017</div>
+              </CardHeader>
               <CardBody>
                 <Row>
-                  <Col sm="5">
-                    <CardTitle className="mb-0">Top Query By Type</CardTitle>
-                    <div className="text-muted">3-7 November 2017</div>
-                  </Col>
-                  <Col sm="7" className="d-none d-sm-inline-block">
-                    <ButtonToolbar className="float-right" aria-label="Toolbar with button groups">
-                      <ButtonGroup className="mr-3" aria-label="First group">
+                  <Col sm="12" className="d-none d-sm-inline-block">
+                    <ButtonToolbar style={{flexDirection: 'row', justifyContent: 'flex-end'}}>
+                      <ButtonGroup>
                       <Button color="outline-secondary" onClick={() => this.onTypeClick('A')} active={this.state.typeSelected === 'A'}>A</Button>
                         <Button color="outline-secondary" onClick={() => this.onTypeClick('AAAA')} active={this.state.typeSelected === 'AAAA'}>AAAA</Button>
                         <Button color="outline-secondary" onClick={() => this.onTypeClick('TXT')} active={this.state.typeSelected === 'TXT'}>TXT</Button>
@@ -474,19 +480,18 @@ class Dashboard extends Component {
           <Col>
             <Card>
               <CardHeader>
-                <i className="fa fa-align-justify"></i> DGA
+                DGA
               </CardHeader>
               <CardBody >
-                <Table hover responsive className="table-outline mb-0 d-none d-sm-table">
+                <Table hover responsive striped>
                   <thead>
                     <tr>
-                      <th>Domain Name</th>
-                      <th>IP</th>
-                      <th>Talker</th>
+                      <th>Date Time</th>
+                      <th>Query</th>
+                      <th>Answer</th>
+                      <th>Client</th>
                       <th>Type</th>
-                      <th>Score</th>
-                      <th>Date</th>
-                      <th>Time</th>
+                      <th>DGA Score</th>
                       <th>Suspected</th>
 
                     </tr>
@@ -495,16 +500,22 @@ class Dashboard extends Component {
                     {
                       this.state.dga.map((row) => {
                         return  <tr>
+                                  <td>{row[5]} {row[6]}</td>
                                   <td>{row[0]}</td>
                                   <td>{row[1]}</td>
                                   <td>{row[2]}</td>
                                   <td>{row[3]}</td>
                                   <td>{row[4]}</td>
-                                  <td>{row[5]}</td>
-                                  <td>{row[6]}</td>
-                                  <td>
-                                    <Badge color="danger">High</Badge>
-                                  </td>
+                                  <td>{[row[4]].map((item) => {
+                                        if (item > 130 ) {
+                                          return <Badge color="danger">High</Badge>     
+                                        } else if (item > 80) {
+                                          return <Badge color="warning">Medium</Badge>
+                                        } else {
+                                          return <Badge color="success">Low</Badge>
+                                        }
+                                      })
+                                    }</td>
                                 </tr>
                       })
                     }
